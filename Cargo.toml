@@ -1,0 +1,11 @@
+[package]
+name = "decl-ts-serve"
+version = "0.1.0"
+authors = ["f2koi <lemonwater@duck.com>"]
+edition = "2021"
+
+[dependencies]
+lalrpop-util = {version = "0.22.1", features = ["lexer"]}
+
+[build-dependencies]
+lalrpop = "0.22.1"
