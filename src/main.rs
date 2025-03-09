@@ -4,12 +4,4 @@ use lalrpop_util::lalrpop_mod;
 mod ast;
 lalrpop_mod!(pub tailscale_serve_status);
 
-fn main() {
-    let parser = tailscale_serve_status::HttpsSpecParser::new();
-    let text = "\
-https://f2koi-windows.whale-dominant.ts.net:32345 (tailnet only)
-|-- / proxy http://127.0.0.1:34342";
-
-    let spec = parser.parse(text).unwrap();
-    println!("{:?}", spec);
-}
+fn main() {}
