@@ -5,6 +5,10 @@ use crate::ast::{HttpSpec, HttpsSpec, ListenAddress, OperationMode};
 
 grammar;
 
+
+pub HttpSpecList: Vec<HttpSpec> = HttpSpec*;
+pub HttpsSpecList: Vec<HttpsSpec> = HttpsSpec*;
+
 pub HttpSpec: HttpSpec = {
     <ts_listen:HttpListenAddressLines> <port:HttpProxyTargetPort> => {
         HttpSpec {
@@ -37,9 +41,14 @@ HttpListenAddressLines: Vec<ListenAddress> = {
 HttpProxyTargetPort: u16 = "|-- / proxy http://127.0.0.1:" <PortNumber>; 
 
 pub ListenAddress: ListenAddress = {
+    // IPv4
     #[precedence(level="0")]
     <Ipv4> ":" <PortNumber> => ListenAddress::Ipv4(SocketAddrV4::new(<>)),
+
+    // IPv6
     r"\[[0-9a-f:]+\]" ":" <PortNumber> => ListenAddress::Ipv6 {port: <>},
+
+    // Domain name
     <dn:r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]+"> ":" <pn:PortNumber> => {
         ListenAddress::Domain { domain_name: dn.to_string(), port: pn }
     },
