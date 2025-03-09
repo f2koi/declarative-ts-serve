@@ -4,4 +4,7 @@ use lalrpop_util::lalrpop_mod;
 mod ast;
 lalrpop_mod!(pub tailscale_serve_status);
 
+#[cfg(test)]
+mod test;
+
 fn main() {}
