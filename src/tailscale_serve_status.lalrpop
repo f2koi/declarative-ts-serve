@@ -1,7 +1,15 @@
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::str::FromStr;
 
-use crate::ast::{HttpSpec, HttpsSpec, ListenAddress, OperationMode};
+use crate::ast::{
+    HttpSpec,
+    HttpsSpec,
+    ListenAddress,
+    OperationMode,
+    Protocol,
+    ListenAddressWithProtocol,
+    DomainOrIp,
+};
 
 grammar;
 
@@ -29,28 +37,48 @@ pub HttpsSpec: HttpsSpec = {
     },
 };
 
-HttpsListenAddressLines: (OperationMode, Vec<ListenAddress>) = {
-    ("https://" <ListenAddress> "(tailnet only)")+ => (OperationMode::Serve, <>),
-    ("https://" <ListenAddress> "(Funnel on)")+ => (OperationMode::Funnel, <>),
+HttpsListenAddressLines: (OperationMode, Vec<ListenAddressWithProtocol>) = {
+    (<ListenAddressWithProtocol> "(tailnet only)")+ => (OperationMode::Serve, <>),
+    (<ListenAddressWithProtocol> "(Funnel on)")+ => (OperationMode::Funnel, <>),
 };
 
-HttpListenAddressLines: Vec<ListenAddress> = {
-    ("http://" <ListenAddress> "(tailnet only)" "\n")+
+HttpListenAddressLines: Vec<ListenAddressWithProtocol> = {
+    (<ListenAddressWithProtocol> "(tailnet only)" "\n")+
 };
 
 HttpProxyTargetPort: u16 = "|-- / proxy http://127.0.0.1:" <PortNumber>; 
 
-pub ListenAddress: ListenAddress = {
+ListenAddressWithProtocol: ListenAddressWithProtocol = {
+    <scheme:r"https?"> "://" <domain_or_ip:DomainOrIp> <pn:(":" <PortNumber>)?> => {
+        let protocol = match scheme {
+            "http" => Protocol::Http,
+            "https" => Protocol::Https,
+            _ => panic!("Unrecognized scheme: {}", scheme),
+        };
+
+        let port = if let Some(port) = pn { port } else { protocol.default_port() };
+
+        ListenAddressWithProtocol {
+            protocol,
+            listen_address: ListenAddress {
+                domain_or_ip,
+                port,
+            },
+        }
+    }
+};
+
+DomainOrIp: DomainOrIp = {
     // IPv4
     #[precedence(level="0")]
-    <Ipv4> ":" <PortNumber> => ListenAddress::Ipv4(SocketAddrV4::new(<>)),
+    <Ipv4> => DomainOrIp::Ipv4(<>),
 
     // IPv6
-    r"\[[0-9a-f:]+\]" ":" <PortNumber> => ListenAddress::Ipv6 {port: <>},
+    r"\[[0-9a-f:]+\]" => DomainOrIp::Ipv6,
 
     // Domain name
-    <dn:r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]+"> ":" <pn:PortNumber> => {
-        ListenAddress::Domain { domain_name: dn.to_string(), port: pn }
+    <dn:r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]+"> => {
+        DomainOrIp::Domain { domain_name: dn.to_string() }
     },
 };
 
